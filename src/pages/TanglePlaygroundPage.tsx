@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useGame } from '../contexts/GameContext';
 import { useAuth } from '../contexts/AuthContext';
 import Header from '../components/Header';
-import TanglePuzzle from '../components/TanglePuzzle';
+import EnhancedTanglePuzzle from '../components/EnhancedTanglePuzzle';
 import { Play, Pause, RotateCcw, Home, Star, Trophy } from 'lucide-react';
 
 const TanglePlaygroundPage: React.FC = () => {
@@ -129,10 +129,14 @@ const TanglePlaygroundPage: React.FC = () => {
         </div>
 
         <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
-          <TanglePuzzle 
+          <EnhancedTanglePuzzle 
             level={parseInt(level!)} 
+            category="tangle"
             onComplete={handleGameComplete}
+            onAttemptFailed={handleGameComplete}
             isPlaying={isPlaying}
+            currentAttempt={attempts + 1}
+            timeLeft={timeLeft}
           />
         </div>
 

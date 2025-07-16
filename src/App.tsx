@@ -13,7 +13,7 @@ import FunThinkerBasicPage from './pages/FunThinkerBasicPage';
 import FunThinkerMediumPage from './pages/FunThinkerMediumPage';
 import FunThinkerHardPage from './pages/FunThinkerHardPage';
 import ProfilePage from './pages/ProfilePage';
-import AdminPage from './pages/AdminPage';
+import EnhancedAdminPage from './pages/EnhancedAdminPage';
 import './App.css';
 
 function App() {
@@ -34,7 +34,7 @@ function App() {
               <Route path="/funthinkers/medium" element={<FunThinkerMediumPage />} />
               <Route path="/funthinkers/hard" element={<FunThinkerHardPage />} />
               <Route path="/profile" element={<ProfilePage />} />
-              <Route path="/admin" element={<AdminPage />} />
+              <Route path="/admin" element={<EnhancedAdminPage />} />
             </Routes>
           </div>
         </Router>

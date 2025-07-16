@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { getCountries, getStates, getCities } from '../data/locationData';
 import { User, Mail, Lock, Globe, School, BookOpen } from 'lucide-react';
 
 const RegistrationPage: React.FC = () => {
@@ -19,14 +20,54 @@ const RegistrationPage: React.FC = () => {
     city: '',
   });
   const [error, setError] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [availableStates, setAvailableStates] = useState<string[]>([]);
+  const [availableCities, setAvailableCities] = useState<string[]>([]);
   const { register } = useAuth();
   const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    
+    // Email validation for 2 characters before @
+    if (name === 'email') {
+      const emailRegex = /^[a-zA-Z]{2}@/;
+      if (value && !emailRegex.test(value)) {
+        setEmailError('Email must contain exactly 2 characters before @ (e.g., ab@gmail.com)');
+      } else {
+        setEmailError('');
+      }
+    }
+    
+    // Handle location dependencies
+    if (name === 'country') {
+      const states = getStates(value);
+      setAvailableStates(states);
+      setAvailableCities([]);
+      setFormData(prev => ({
+        ...prev,
+        [name]: value,
+        state: '',
+        city: ''
+      }));
+      return;
+    }
+    
+    if (name === 'state') {
+      const cities = getCities(formData.country, value);
+      setAvailableCities(cities);
+      setFormData(prev => ({
+        ...prev,
+        [name]: value,
+        city: ''
+      }));
+      return;
+    }
+    
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: value,
     });
   };
 
@@ -34,11 +75,22 @@ const RegistrationPage: React.FC = () => {
     e.preventDefault();
     setError('');
 
+    // Enhanced password validation
+    const passwordRegex = /^(?=.*[A-Z])(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/;
+    if (!passwordRegex.test(formData.password)) {
+      setError('Password must be at least 8 characters with 1 uppercase letter and 1 special character');
+      return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
     }
 
+    if (emailError) {
+      setError('Please fix email format error');
+      return;
+    }
     setIsLoading(true);
 
     try {
@@ -116,11 +168,16 @@ const RegistrationPage: React.FC = () => {
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
+                    emailError ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   placeholder="your@email.com"
                   required
                 />
               </div>
+              {emailError && (
+                <p className="mt-1 text-sm text-red-600">{emailError}</p>
+              )}
             </div>
 
             <div>
@@ -218,17 +275,10 @@ const RegistrationPage: React.FC = () => {
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                   required
                 >
-                  <option value="">Select Grade</option>
-                  <option value="1st Grade">1st Grade</option>
-                  <option value="2nd Grade">2nd Grade</option>
-                  <option value="3rd Grade">3rd Grade</option>
-                  <option value="4th Grade">4th Grade</option>
-                  <option value="5th Grade">5th Grade</option>
-                  <option value="6th Grade">6th Grade</option>
-                  <option value="7th Grade">7th Grade</option>
-                  <option value="8th Grade">8th Grade</option>
-                  <option value="9th Grade">9th Grade</option>
-                  <option value="10th Grade">10th Grade</option>
+                  <option value="">Select Standard</option>
+                  {Array.from({ length: 10 }, (_, i) => i + 1).map(num => (
+                    <option key={num} value={`${num}`}>{num}</option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -258,48 +308,59 @@ const RegistrationPage: React.FC = () => {
               <label htmlFor="country" className="block text-sm font-medium text-gray-700 mb-1">
                 Country*
               </label>
-              <input
-                type="text"
+              <select
                 id="country"
                 name="country"
                 value={formData.country}
                 onChange={handleChange}
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                placeholder="Your country"
                 required
-              />
+              >
+                <option value="">Select Country</option>
+                {getCountries().map(country => (
+                  <option key={country} value={country}>{country}</option>
+                ))}
+              </select>
             </div>
 
             <div>
               <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-1">
                 State*
               </label>
-              <input
-                type="text"
+              <select
                 id="state"
                 name="state"
                 value={formData.state}
                 onChange={handleChange}
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                placeholder="Your state"
+                disabled={!formData.country}
                 required
-              />
+              >
+                <option value="">Select State</option>
+                {availableStates.map(state => (
+                  <option key={state} value={state}>{state}</option>
+                ))}
+              </select>
             </div>
 
             <div>
               <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
                 City*
               </label>
-              <input
-                type="text"
+              <select
                 id="city"
                 name="city"
                 value={formData.city}
                 onChange={handleChange}
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                placeholder="Your city"
+                disabled={!formData.state}
                 required
-              />
+              >
+                <option value="">Select City</option>
+                {availableCities.map(city => (
+                  <option key={city} value={city}>{city}</option>
+                ))}
+              </select>
             </div>
           </div>
 
