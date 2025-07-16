@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useGame } from '../contexts/GameContext';
 import { useAuth } from '../contexts/AuthContext';
 import Header from '../components/Header';
+import TanglePuzzle from '../components/TanglePuzzle';
 import { Play, Pause, RotateCcw, Home, Star, Trophy } from 'lucide-react';
 
 const TanglePlaygroundPage: React.FC = () => {
@@ -128,20 +129,15 @@ const TanglePlaygroundPage: React.FC = () => {
         </div>
 
         <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
-          <div className="text-center mb-6">
-            <div className="w-full h-96 bg-gradient-to-br from-orange-100 to-red-100 rounded-xl flex items-center justify-center mb-6">
-              <div className="text-center">
-                <div className="w-32 h-32 bg-orange-500 rounded-lg mb-4 mx-auto flex items-center justify-center">
-                  <span className="text-white text-2xl font-bold">Puzzle</span>
-                </div>
-                <p className="text-gray-600">Interactive puzzle area</p>
-                <p className="text-sm text-gray-500 mt-2">
-                  This would contain the actual tangle puzzle game
-                </p>
-              </div>
-            </div>
-          </div>
+          <TanglePuzzle 
+            level={parseInt(level!)} 
+            onComplete={handleGameComplete}
+            isPlaying={isPlaying}
+          />
+        </div>
 
+        {/* Game Controls */}
+        <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
           <div className="flex justify-center space-x-4">
             {!isPlaying ? (
               <button
@@ -168,14 +164,6 @@ const TanglePlaygroundPage: React.FC = () => {
             >
               <RotateCcw className="w-5 h-5" />
               <span>Reset</span>
-            </button>
-
-            <button
-              onClick={handleGameComplete}
-              className="flex items-center space-x-2 bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold transition-colors"
-            >
-              <Trophy className="w-5 h-5" />
-              <span>Complete (Demo)</span>
             </button>
 
             <button
