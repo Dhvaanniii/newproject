@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
+import LevelImageManager from '../components/LevelImageManager';
 import { Users, Puzzle, BarChart3, Settings, Plus, Edit, Trash2 } from 'lucide-react';
 
 const AdminPage: React.FC = () => {
@@ -31,6 +32,7 @@ const AdminPage: React.FC = () => {
   const tabs = [
     { id: 'users', label: 'User Management', icon: Users },
     { id: 'puzzles', label: 'Puzzle Management', icon: Puzzle },
+    { id: 'images', label: 'Level Images', icon: Puzzle },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
@@ -133,6 +135,12 @@ const AdminPage: React.FC = () => {
           </tbody>
         </table>
       </div>
+    </div>
+  );
+
+  const renderImages = () => (
+    <div className="space-y-6">
+      <LevelImageManager />
     </div>
   );
 
@@ -259,6 +267,7 @@ const AdminPage: React.FC = () => {
           <div className="flex-1">
             {activeTab === 'users' && renderUsers()}
             {activeTab === 'puzzles' && renderPuzzles()}
+            {activeTab === 'images' && renderImages()}
             {activeTab === 'analytics' && renderAnalytics()}
             {activeTab === 'settings' && renderSettings()}
           </div>

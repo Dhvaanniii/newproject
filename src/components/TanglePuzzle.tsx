@@ -1,7 +1,8 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { RotateCw, Trash2, CheckCircle, Move, Layers } from 'lucide-react';
+import { RotateCw, Trash2, CheckCircle, Move, Layers, Eye, EyeOff, Target, Lightbulb } from 'lucide-react';
 import ShapeLibrary from './ShapeLibrary';
 import ColorPalette from './ColorPalette';
+import { getTargetImageUrl } from '../utils/imageStorage';
 
 interface Shape {
   id: string;
@@ -25,6 +26,9 @@ const TanglePuzzle: React.FC<TanglePuzzleProps> = ({ level, onComplete, isPlayin
   const [selectedShape, setSelectedShape] = useState<string | null>(null);
   const [draggedShape, setDraggedShape] = useState<string | null>(null);
   const [selectedColor, setSelectedColor] = useState('#3B82F6');
+  const [showTarget, setShowTarget] = useState(true);
+  const [targetOpacity, setTargetOpacity] = useState(0.5);
+  const [showHint, setShowHint] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
   const dragOffset = useRef({ x: 0, y: 0 });
   const [nextZIndex, setNextZIndex] = useState(1);
@@ -36,8 +40,8 @@ const TanglePuzzle: React.FC<TanglePuzzleProps> = ({ level, onComplete, isPlayin
       id: `shape-${Date.now()}`,
       type,
       color: selectedColor,
-      x: 100 + Math.random() * 200,
-      y: 100 + Math.random() * 200,
+      x: 50 + Math.random() * 100, // Start shapes in a smaller area
+      y: 50 + Math.random() * 100,
       rotation: 0,
       size: 60,
       zIndex: nextZIndex,
@@ -50,6 +54,7 @@ const TanglePuzzle: React.FC<TanglePuzzleProps> = ({ level, onComplete, isPlayin
     if (!isPlaying) return;
     
     e.preventDefault();
+    e.stopPropagation();
     setSelectedShape(shapeId);
     setDraggedShape(shapeId);
     
@@ -72,13 +77,19 @@ const TanglePuzzle: React.FC<TanglePuzzleProps> = ({ level, onComplete, isPlayin
     
     setShapes(prev => prev.map(shape => 
       shape.id === draggedShape 
-        ? { ...shape, x: Math.max(0, Math.min(newX, 500)), y: Math.max(0, Math.min(newY, 350)) }
+        ? { ...shape, x: Math.max(0, Math.min(newX, 540)), y: Math.max(0, Math.min(newY, 340)) }
         : shape
     ));
   }, [draggedShape, isPlaying]);
 
   const handleMouseUp = useCallback(() => {
     setDraggedShape(null);
+  }, []);
+
+  const handleCanvasClick = useCallback((e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      setSelectedShape(null);
+    }
   }, []);
 
   const rotateShape = (shapeId: string) => {
@@ -99,6 +110,15 @@ const TanglePuzzle: React.FC<TanglePuzzleProps> = ({ level, onComplete, isPlayin
     ));
   };
 
+  const changeShapeSize = (shapeId: string, delta: number) => {
+    if (!isPlaying) return;
+    setShapes(prev => prev.map(shape => 
+      shape.id === shapeId 
+        ? { ...shape, size: Math.max(20, Math.min(120, shape.size + delta)) }
+        : shape
+    ));
+  };
+
   const bringToFront = (shapeId: string) => {
     if (!isPlaying) return;
     setShapes(prev => prev.map(shape => 
@@ -111,12 +131,14 @@ const TanglePuzzle: React.FC<TanglePuzzleProps> = ({ level, onComplete, isPlayin
 
   const sendToBack = (shapeId: string) => {
     if (!isPlaying) return;
+    const minZ = Math.min(...shapes.map(s => s.zIndex));
     setShapes(prev => prev.map(shape => 
       shape.id === shapeId 
-        ? { ...shape, zIndex: 0 }
+        ? { ...shape, zIndex: minZ - 1 }
         : shape
     ));
   };
+
   const deleteShape = (shapeId: string) => {
     if (!isPlaying) return;
     setShapes(prev => prev.filter(shape => shape.id !== shapeId));
@@ -234,7 +256,10 @@ const TanglePuzzle: React.FC<TanglePuzzleProps> = ({ level, onComplete, isPlayin
         key={shape.id}
         style={baseStyle}
         onMouseDown={(e) => handleMouseDown(e, shape.id)}
-        onClick={() => setSelectedShape(shape.id)}
+        onClick={(e) => {
+          e.stopPropagation();
+          setSelectedShape(shape.id);
+        }}
       >
         {shapeElement}
       </div>
@@ -242,13 +267,13 @@ const TanglePuzzle: React.FC<TanglePuzzleProps> = ({ level, onComplete, isPlayin
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto">
+    <div className="w-full max-w-6xl mx-auto">
       {/* Toolbar */}
       <div className="bg-white rounded-lg shadow-md p-4 mb-4">
         <div className="flex flex-wrap items-center gap-4">
           {/* Shape Tools */}
           <div>
-            <span className="text-sm font-medium text-gray-700">Shapes:</span>
+            <span className="text-sm font-medium text-gray-700">Add Shapes:</span>
             <div className="mt-2">
               <ShapeLibrary onShapeSelect={addShape} disabled={!isPlaying} />
             </div>
@@ -266,6 +291,40 @@ const TanglePuzzle: React.FC<TanglePuzzleProps> = ({ level, onComplete, isPlayin
             </div>
           </div>
 
+          {/* View Controls */}
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowTarget(!showTarget)}
+                className="flex items-center space-x-1 px-3 py-2 bg-blue-100 hover:bg-blue-200 rounded-lg transition-colors"
+              >
+                {showTarget ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                <span className="text-sm">Target</span>
+              </button>
+              <button
+                onClick={() => setShowHint(!showHint)}
+                className="flex items-center space-x-1 px-3 py-2 bg-purple-100 hover:bg-purple-200 rounded-lg transition-colors"
+              >
+                <Lightbulb className="w-4 h-4" />
+                <span className="text-sm">Hint</span>
+              </button>
+            </div>
+            {showTarget && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-600">Opacity:</span>
+                <input
+                  type="range"
+                  min="0.1"
+                  max="1"
+                  step="0.1"
+                  value={targetOpacity}
+                  onChange={(e) => setTargetOpacity(parseFloat(e.target.value))}
+                  className="w-16"
+                />
+              </div>
+            )}
+          </div>
+
           {/* Action Buttons */}
           <div className="flex flex-wrap items-center gap-2 ml-auto">
             {selectedShape && (
@@ -278,6 +337,23 @@ const TanglePuzzle: React.FC<TanglePuzzleProps> = ({ level, onComplete, isPlayin
                   <RotateCw className="w-4 h-4" />
                   <span className="text-sm">Rotate</span>
                 </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => changeShapeSize(selectedShape, -10)}
+                    disabled={!isPlaying}
+                    className="px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-sm disabled:opacity-50"
+                  >
+                    -
+                  </button>
+                  <span className="text-xs text-gray-600">Size</span>
+                  <button
+                    onClick={() => changeShapeSize(selectedShape, 10)}
+                    disabled={!isPlaying}
+                    className="px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-sm disabled:opacity-50"
+                  >
+                    +
+                  </button>
+                </div>
                 <button
                   onClick={() => bringToFront(selectedShape)}
                   disabled={!isPlaying}
@@ -323,72 +399,142 @@ const TanglePuzzle: React.FC<TanglePuzzleProps> = ({ level, onComplete, isPlayin
         </div>
       </div>
 
-      {/* Canvas */}
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        <div
-          ref={canvasRef}
-          className="relative w-full h-96 bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-dashed border-gray-300"
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-        >
-          {/* Grid Pattern */}
-          <div 
-            className="absolute inset-0 opacity-20"
-            style={{
-              backgroundImage: `
-                linear-gradient(to right, #e5e7eb 1px, transparent 1px),
-                linear-gradient(to bottom, #e5e7eb 1px, transparent 1px)
-              `,
-              backgroundSize: '20px 20px'
-            }}
-          />
-          
-          {/* Target Area Hint */}
-          <div className="absolute inset-4 border-2 border-blue-300 border-dashed rounded-lg flex items-center justify-center">
-            <div className="text-center text-gray-500">
-              <div className="text-lg font-medium mb-2">Level {level} Target</div>
-              <div className="text-sm">Drag and arrange shapes to match the pattern</div>
+      {/* Main Canvas Area */}
+      <div className="flex gap-4">
+        {/* Target Image Panel */}
+        <div className="w-1/3">
+          <div className="bg-white rounded-lg shadow-md p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Target className="w-5 h-5 text-blue-600" />
+              <h3 className="font-semibold text-gray-800">Target Pattern</h3>
+              <span className="text-sm text-gray-500">Level {level}</span>
             </div>
+            <div className="relative bg-gray-50 rounded-lg overflow-hidden">
+              <img
+                src={getTargetImageUrl(level)}
+                alt={`Target pattern for level ${level}`}
+                className="w-full h-48 object-cover"
+                onError={(e) => {
+                  // Fallback to a placeholder if image fails to load
+                  e.currentTarget.src = `https://via.placeholder.com/300x200/e5e7eb/6b7280?text=Level+${level}`;
+                }}
+              />
+              <div className="absolute inset-0 bg-blue-500 bg-opacity-10 flex items-center justify-center">
+                <div className="text-center text-blue-800">
+                  <div className="text-sm font-medium">Match this pattern!</div>
+                </div>
+              </div>
+            </div>
+            {showHint && (
+              <div className="mt-3 p-3 bg-yellow-50 rounded-lg">
+                <div className="text-sm text-yellow-800">
+                  <strong>Hint:</strong> Try using different shapes and colors to recreate the pattern above. 
+                  Use the opacity slider to see through the target image while you work.
+                </div>
+              </div>
+            )}
           </div>
-
-          {/* Shapes */}
-          {shapes.map(renderShape)}
         </div>
 
-        {/* Selected Shape Controls */}
-        {selectedShape && (
-          <div className="p-4 bg-gray-50 border-t">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="flex flex-wrap items-center gap-4">
-                <span className="text-sm font-medium text-gray-700">Selected Shape:</span>
-                <ColorPalette 
-                  selectedColor={shapes.find(s => s.id === selectedShape)?.color || selectedColor}
-                  onColorSelect={(color) => changeShapeColor(selectedShape, color)}
-                  disabled={!isPlaying}
-                  size="sm"
-                />
-              </div>
-              <div className="text-sm text-gray-600">
-                <Move className="inline w-4 h-4 mr-1" />
-                Drag to move • Rotate • Layer • Change colors
-              </div>
+        {/* Working Canvas */}
+        <div className="flex-1">
+          <div className="bg-white rounded-lg shadow-md overflow-hidden">
+            <div
+              ref={canvasRef}
+              className="relative w-full h-96 bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-dashed border-gray-300"
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+              onClick={handleCanvasClick}
+            >
+              {/* Grid Pattern */}
+              <div 
+                className="absolute inset-0 opacity-20"
+                style={{
+                  backgroundImage: `
+                    linear-gradient(to right, #e5e7eb 1px, transparent 1px),
+                    linear-gradient(to bottom, #e5e7eb 1px, transparent 1px)
+                  `,
+                  backgroundSize: '20px 20px'
+                }}
+              />
+              
+              {/* Target Image Overlay */}
+              {showTarget && (
+                <div 
+                  className="absolute inset-0 pointer-events-none"
+                  style={{ opacity: targetOpacity }}
+                >
+                  <img
+                    src={getTargetImageUrl(level)}
+                    alt="Target overlay"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = `https://via.placeholder.com/600x400/e5e7eb/6b7280?text=Level+${level}`;
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Working Area Instructions */}
+              {shapes.length === 0 && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="text-center text-gray-500">
+                    <div className="text-lg font-medium mb-2">Working Canvas</div>
+                    <div className="text-sm">Add shapes and drag them to match the target pattern</div>
+                  </div>
+                </div>
+              )}
+
+              {/* Shapes */}
+              {shapes.map(renderShape)}
             </div>
+
+            {/* Selected Shape Controls */}
+            {selectedShape && (
+              <div className="p-4 bg-gray-50 border-t">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex flex-wrap items-center gap-4">
+                    <span className="text-sm font-medium text-gray-700">Selected Shape:</span>
+                    <ColorPalette 
+                      selectedColor={shapes.find(s => s.id === selectedShape)?.color || selectedColor}
+                      onColorSelect={(color) => changeShapeColor(selectedShape, color)}
+                      disabled={!isPlaying}
+                      size="sm"
+                    />
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    <Move className="inline w-4 h-4 mr-1" />
+                    Drag to move • Rotate • Resize • Layer • Change colors
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
       {/* Instructions */}
       <div className="mt-4 p-4 bg-blue-50 rounded-lg">
         <h3 className="font-medium text-blue-900 mb-2">How to Play:</h3>
-        <ul className="text-sm text-blue-800 space-y-1">
-          <li>• Click shape buttons to add new shapes to the canvas</li>
-          <li>• Drag shapes around to position them</li>
-          <li>• Click a shape to select it, then use rotate, layer, or color tools</li>
-          <li>• Use "Front" and "Back" buttons to control which shapes appear on top</li>
-          <li>• Arrange shapes to match the target pattern</li>
-          <li>• Click "Complete" when you're satisfied with your arrangement</li>
-        </ul>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-800">
+          <div>
+            <ul className="space-y-1">
+              <li>• Look at the target pattern on the left</li>
+              <li>• Add shapes using the shape library</li>
+              <li>• Drag shapes to position them correctly</li>
+              <li>• Use rotation and sizing tools to match exactly</li>
+            </ul>
+          </div>
+          <div>
+            <ul className="space-y-1">
+              <li>• Toggle target overlay to see through it</li>
+              <li>• Adjust opacity to work more easily</li>
+              <li>• Use layers to control which shapes are on top</li>
+              <li>• Click "Complete" when your pattern matches!</li>
+            </ul>
+          </div>
+        </div>
       </div>
     </div>
   );
