@@ -17,9 +17,13 @@ const LoginPage: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const success = await login(username, password);
-      if (success) {
-        navigate('/home');
+      const result = await login(username, password);
+      if (result.success) {
+        if (result.userType === 'admin') {
+          navigate('/admin');
+        } else {
+          navigate('/home');
+        }
       } else {
         setError('Invalid username or password');
       }
@@ -105,8 +109,9 @@ const LoginPage: React.FC = () => {
         <div className="mt-6 p-4 bg-gray-50 rounded-xl">
           <p className="text-sm text-gray-600 text-center mb-2">Demo Accounts:</p>
           <div className="text-xs text-gray-500 space-y-1">
-            <p>Admin: username=admin, password=admin</p>
-            <p>User: username=user, password=user</p>
+            <p>Admin: username=admin, password=Admin@123</p>
+            <p>Admin: username=superadmin, password=Super@123</p>
+            <p>Register as regular user with strong password</p>
           </div>
         </div>
       </div>

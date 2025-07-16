@@ -18,7 +18,7 @@ const Header: React.FC = () => {
     <header className="bg-white shadow-lg border-b-4 border-blue-500">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          <Link to="/home" className="flex items-center space-x-2">
+          <Link to={user.userType === 'admin' ? '/admin' : '/home'} className="flex items-center space-x-2">
             <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-lg">P</span>
             </div>
@@ -33,16 +33,21 @@ const Header: React.FC = () => {
 
             <div className="flex items-center space-x-2 text-gray-700">
               <User className="w-4 h-4" />
-              <span className="font-medium">{user.username}</span>
+              <div className="flex flex-col">
+                <span className="font-medium">{user.username}</span>
+                <span className="text-xs text-gray-500">{user.userType === 'admin' ? 'Administrator' : 'Player'}</span>
+              </div>
             </div>
 
-            <Link 
-              to="/profile" 
-              className="flex items-center space-x-1 text-gray-600 hover:text-blue-600 transition-colors"
-            >
-              <Settings className="w-4 h-4" />
-              <span>Profile</span>
-            </Link>
+            {user.userType === 'user' && (
+              <Link 
+                to="/profile" 
+                className="flex items-center space-x-1 text-gray-600 hover:text-blue-600 transition-colors"
+              >
+                <Settings className="w-4 h-4" />
+                <span>Edit Profile</span>
+              </Link>
+            )}
 
             <button
               onClick={handleLogout}

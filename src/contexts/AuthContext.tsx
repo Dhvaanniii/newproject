@@ -1,25 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-interface User {
-  id: string;
-  username: string;
-  realname: string;
-  email: string;
-  language: string;
-  school: string;
-  standard: string;
-  board: string;
-  country: string;
-  state: string;
-  city: string;
-  coins: number;
-  isAdmin: boolean;
-}
+import { User } from '../types/user';
 
 interface AuthContextType {
   user: User | null;
-  login: (username: string, password: string) => Promise<boolean>;
-  register: (userData: Omit<User, 'id' | 'coins' | 'isAdmin'>) => Promise<boolean>;
+  login: (username: string, password: string) => Promise<{ success: boolean; userType?: 'admin' | 'user' }>;
+  register: (userData: Omit<User, 'id' | 'coins' | 'userType' | 'createdAt'>) => Promise<boolean>;
   logout: () => void;
   updateProfile: (userData: Partial<User>) => void;
   addCoins: (amount: number) => void;
@@ -44,60 +30,106 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (storedUser) {
       setUser(JSON.parse(storedUser));
     }
+    
+    // Initialize admin users if not exists
+    const adminUsers = localStorage.getItem('adminUsers');
+    if (!adminUsers) {
+      const defaultAdmins = [
+        {
+          id: 'admin1',
+          username: 'admin',
+          password: 'Admin@123',
+          realname: 'System Administrator',
+          email: 'ad@admin.com',
+          language: 'English',
+          school: 'Admin School',
+          standard: 'Admin',
+          board: 'Admin',
+          country: 'India',
+          state: 'Gujarat',
+          city: 'Ahmedabad',
+          coins: 10000,
+          userType: 'admin' as const,
+          createdAt: new Date()
+        },
+        {
+          id: 'admin2',
+          username: 'superadmin',
+          password: 'Super@123',
+          realname: 'Super Administrator',
+          email: 'su@admin.com',
+          language: 'English',
+          school: 'Admin School',
+          standard: 'Admin',
+          board: 'Admin',
+          country: 'India',
+          state: 'Maharashtra',
+          city: 'Mumbai',
+          coins: 10000,
+          userType: 'admin' as const,
+          createdAt: new Date()
+        }
+      ];
+      localStorage.setItem('adminUsers', JSON.stringify(defaultAdmins));
+    }
   }, []);
 
-  const login = async (username: string, password: string): Promise<boolean> => {
+  const login = async (username: string, password: string): Promise<{ success: boolean; userType?: 'admin' | 'user' }> => {
     // Simulate API call
-    if (username === 'admin' && password === 'admin') {
-      const adminUser: User = {
-        id: '1',
-        username: 'admin',
-        realname: 'Administrator',
-        email: 'admin@puzzlegame.com',
-        language: 'English',
-        school: 'Admin School',
-        standard: 'Admin',
-        board: 'Admin Board',
-        country: 'USA',
-        state: 'California',
-        city: 'San Francisco',
-        coins: 1000,
-        isAdmin: true,
-      };
-      setUser(adminUser);
-      localStorage.setItem('user', JSON.stringify(adminUser));
-      return true;
-    } else if (username === 'user' && password === 'user') {
-      const regularUser: User = {
-        id: '2',
-        username: 'user',
-        realname: 'Test User',
-        email: 'user@puzzlegame.com',
-        language: 'English',
-        school: 'Test School',
-        standard: '5th Grade',
-        board: 'CBSE',
-        country: 'India',
-        state: 'Maharashtra',
-        city: 'Mumbai',
-        coins: 50,
-        isAdmin: false,
-      };
-      setUser(regularUser);
-      localStorage.setItem('user', JSON.stringify(regularUser));
-      return true;
+    
+    // Check admin users
+    const adminUsers = JSON.parse(localStorage.getItem('adminUsers') || '[]');
+    const adminUser = adminUsers.find((admin: User) => 
+      admin.username === username && admin.password === password
+    );
+    
+    if (adminUser) {
+      const updatedAdmin = { ...adminUser, lastLogin: new Date() };
+      setUser(updatedAdmin);
+      localStorage.setItem('user', JSON.stringify(updatedAdmin));
+      return { success: true, userType: 'admin' };
     }
-    return false;
+    
+    // Check regular users
+    const regularUsers = JSON.parse(localStorage.getItem('regularUsers') || '[]');
+    const regularUser = regularUsers.find((user: User) => 
+      user.username === username && user.password === password
+    );
+    
+    if (regularUser) {
+      const updatedUser = { ...regularUser, lastLogin: new Date() };
+      setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      return { success: true, userType: 'user' };
+    }
+    
+    return { success: false };
   };
 
-  const register = async (userData: Omit<User, 'id' | 'coins' | 'isAdmin'>): Promise<boolean> => {
+  const register = async (userData: Omit<User, 'id' | 'coins' | 'userType' | 'createdAt'>): Promise<boolean> => {
     // Simulate API call
+    
+    // Check if username already exists
+    const adminUsers = JSON.parse(localStorage.getItem('adminUsers') || '[]');
+    const regularUsers = JSON.parse(localStorage.getItem('regularUsers') || '[]');
+    const allUsers = [...adminUsers, ...regularUsers];
+    
+    if (allUsers.some((user: User) => user.username === userData.username)) {
+      return false; // Username already exists
+    }
+    
     const newUser: User = {
       ...userData,
       id: Date.now().toString(),
       coins: 100, // Starting coins
-      isAdmin: false,
+      userType: 'user',
+      createdAt: new Date()
     };
+    
+    // Save to regular users
+    const updatedUsers = [...regularUsers, newUser];
+    localStorage.setItem('regularUsers', JSON.stringify(updatedUsers));
+    
     setUser(newUser);
     localStorage.setItem('user', JSON.stringify(newUser));
     return true;

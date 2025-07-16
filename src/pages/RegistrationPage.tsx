@@ -32,7 +32,7 @@ const RegistrationPage: React.FC = () => {
     
     // Email validation for 2 characters before @
     if (name === 'email') {
-      const emailRegex = /^[a-zA-Z]{2}@/;
+      const emailRegex = /^[a-zA-Z0-9]{2}@[^\s@]+\.[^\s@]+$/;
       if (value && !emailRegex.test(value)) {
         setEmailError('Email must contain exactly 2 characters before @ (e.g., ab@gmail.com)');
       } else {
@@ -89,6 +89,15 @@ const RegistrationPage: React.FC = () => {
 
     if (emailError) {
       setError('Please fix email format error');
+      return;
+    }
+    
+    // Check if all required fields are filled
+    const requiredFields = ['username', 'password', 'realname', 'email', 'language', 'school', 'standard', 'board', 'country', 'state', 'city'];
+    const missingFields = requiredFields.filter(field => !formData[field as keyof typeof formData]);
+    
+    if (missingFields.length > 0) {
+      setError(`Please fill all required fields: ${missingFields.join(', ')}`);
       return;
     }
     setIsLoading(true);
@@ -277,7 +286,7 @@ const RegistrationPage: React.FC = () => {
                 >
                   <option value="">Select Standard</option>
                   {Array.from({ length: 10 }, (_, i) => i + 1).map(num => (
-                    <option key={num} value={`${num}`}>{num}</option>
+                    <option key={num} value={`${num}th Grade`}>{num}th Grade</option>
                   ))}
                 </select>
               </div>

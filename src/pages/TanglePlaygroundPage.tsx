@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useGame } from '../contexts/GameContext';
 import { useAuth } from '../contexts/AuthContext';
 import Header from '../components/Header';
-import EnhancedTanglePuzzle from '../components/EnhancedTanglePuzzle';
+import TangleGameplay from '../components/TangleGameplay';
 import { Play, Pause, RotateCcw, Home, Star, Trophy } from 'lucide-react';
 
 const TanglePlaygroundPage: React.FC = () => {
@@ -18,6 +18,7 @@ const TanglePlaygroundPage: React.FC = () => {
   const [showResult, setShowResult] = useState(false);
   const [gameCompleted, setGameCompleted] = useState(false);
   const [stars, setStars] = useState(0);
+  const [points, setPoints] = useState(0);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -27,7 +28,7 @@ const TanglePlaygroundPage: React.FC = () => {
       }, 1000);
     } else if (timeLeft === 0) {
       setIsPlaying(false);
-      handleGameComplete();
+      handleAttemptFailed();
     }
     return () => clearInterval(interval);
   }, [isPlaying, timeLeft]);
@@ -53,34 +54,51 @@ const TanglePlaygroundPage: React.FC = () => {
     setGameCompleted(false);
     setShowResult(false);
     setStars(0);
+    setPoints(0);
   };
 
-  const handleGameComplete = () => {
+  const handleGameComplete = (attemptNumber: number, timeUsed: number, earnedPoints: number) => {
     setIsPlaying(false);
     setGameCompleted(true);
     
-    const newAttempts = attempts + 1;
-    setAttempts(newAttempts);
+    setAttempts(attemptNumber);
+    setPoints(earnedPoints);
     
     // Calculate stars based on attempts
     let earnedStars = 0;
-    if (newAttempts === 1) earnedStars = 3;
-    else if (newAttempts === 2) earnedStars = 2;
-    else if (newAttempts === 3) earnedStars = 1;
+    if (attemptNumber === 1) earnedStars = 3;
+    else if (attemptNumber === 2) earnedStars = 2;
+    else if (attemptNumber === 3) earnedStars = 1;
     
     setStars(earnedStars);
     
     // Update progress
     const levelId = `tangle-${level}`;
-    updateProgress(levelId, earnedStars, newAttempts);
+    updateProgress(levelId, earnedStars, attemptNumber);
     unlockNextLevel(levelId, 'tangle');
     
-    // Add coins based on stars
-    addCoins(earnedStars * 10);
+    // Add coins based on points
+    addCoins(earnedPoints);
     
     setShowResult(true);
   };
 
+  const handleAttemptFailed = () => {
+    const newAttempts = attempts + 1;
+    setAttempts(newAttempts);
+    
+    if (newAttempts >= 3) {
+      // Game over after 3 attempts
+      setGameCompleted(true);
+      setStars(0);
+      setPoints(0);
+      setShowResult(true);
+    } else {
+      // Reset for next attempt
+      setTimeLeft(300);
+      setIsPlaying(false);
+    }
+  };
   const handleNextLevel = () => {
     const nextLevel = parseInt(level!) + 1;
     if (nextLevel <= 200) {
@@ -89,6 +107,7 @@ const TanglePlaygroundPage: React.FC = () => {
       setGameCompleted(false);
       setAttempts(0);
       setStars(0);
+      setPoints(0);
       setTimeLeft(300);
     } else {
       navigate('/tangles');
@@ -129,14 +148,15 @@ const TanglePlaygroundPage: React.FC = () => {
         </div>
 
         <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
-          <EnhancedTanglePuzzle 
+          <TangleGameplay 
             level={parseInt(level!)} 
             category="tangle"
             onComplete={handleGameComplete}
-            onAttemptFailed={handleGameComplete}
+            onAttemptFailed={handleAttemptFailed}
             isPlaying={isPlaying}
             currentAttempt={attempts + 1}
             timeLeft={timeLeft}
+            onGameStart={handleStart}
           />
         </div>
 
@@ -199,7 +219,7 @@ const TanglePlaygroundPage: React.FC = () => {
                   {renderStars(stars)}
                 </div>
                 <p className="text-sm text-gray-600">
-                  You earned {stars} star{stars !== 1 ? 's' : ''} and {stars * 10} coins!
+                  You earned {stars} star{stars !== 1 ? 's' : ''} and {points} coins!
                 </p>
               </div>
 
