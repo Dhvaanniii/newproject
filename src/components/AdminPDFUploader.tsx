@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { apiService } from '../services/api';
 import { Upload, FileText, Trash2, CheckCircle, AlertCircle, Folder, Eye } from 'lucide-react';
 
 interface PDFLevel {
@@ -32,24 +33,28 @@ const AdminPDFUploader: React.FC<AdminPDFUploaderProps> = ({ category, onLevelsC
   }, [category]);
 
   const loadExistingLevels = () => {
-    const stored = localStorage.getItem(`${category}-levels`);
-    if (stored) {
-      try {
-        const levels = JSON.parse(stored).map((level: any) => ({
-          ...level,
-          unlockDate: new Date(level.unlockDate),
-          lockDate: new Date(level.lockDate),
-          uploadDate: new Date(level.uploadDate),
-          hasBeenPlayed: level.hasBeenPlayed || false
-        }));
-        setExistingLevels(levels);
-      } catch (error) {
+    apiService.getLevelsByCategory(category)
+      .then(response => {
+        if (response.success) {
+          const levels = response.levels.map((level: any) => ({
+            levelNumber: level.levelNumber,
+            pageNumber: level.pageNumber,
+            category: level.category,
+            outlineUrl: level.outlineUrl,
+            unlockDate: new Date(level.unlockDate),
+            lockDate: new Date(level.lockDate),
+            uploadDate: new Date(level.uploadDate),
+            hasBeenPlayed: level.hasBeenPlayed || false
+          }));
+          setExistingLevels(levels);
+        } else {
+          setExistingLevels([]);
+        }
+      })
+      .catch(error => {
         console.error('Error loading existing levels:', error);
         setExistingLevels([]);
-      }
-    } else {
-      setExistingLevels([]);
-    }
+      });
   };
 
   const getExistingLevelCount = (): number => {
@@ -84,80 +89,31 @@ const AdminPDFUploader: React.FC<AdminPDFUploaderProps> = ({ category, onLevelsC
     setError('');
 
     try {
-      // Simulate PDF processing with realistic delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // For demo purposes, we'll simulate extracting pages from PDF
-      // In real implementation, you would use PDF.js or similar library
-      const pageCount = Math.floor(Math.random() * 10) + 5; // Random 5-15 pages
-      const existingCount = getExistingLevelCount();
+      const response = await apiService.uploadPDF(category, uploadedFile);
       
-      const newLevels: PDFLevel[] = [];
-      
-      for (let i = 1; i <= pageCount; i++) {
-        const levelNumber = existingCount + i;
-        const uploadDate = new Date();
+      if (response.success) {
+        const newLevels = response.levels.map((level: any) => ({
+          levelNumber: level.levelNumber,
+          pageNumber: level.pageNumber,
+          category: level.category,
+          outlineUrl: level.outlineUrl,
+          unlockDate: new Date(level.unlockDate),
+          lockDate: new Date(level.lockDate),
+          uploadDate: new Date(level.uploadDate),
+          hasBeenPlayed: level.hasBeenPlayed || false
+        }));
         
-        // Each level unlocks daily starting from tomorrow
-        const unlockDate = new Date();
-        unlockDate.setDate(unlockDate.getDate() + (levelNumber - 1));
-        unlockDate.setHours(0, 0, 0, 0); // Midnight unlock
-        
-        // Level locks after 15 days if not played
-        const lockDate = new Date(unlockDate);
-        lockDate.setDate(lockDate.getDate() + 15);
-
-        // Create mock outline URL - in real implementation, convert PDF page to image/SVG
-        const canvas = document.createElement('canvas');
-        canvas.width = 400;
-        canvas.height = 300;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          // Create a simple outline pattern for demo
-          ctx.fillStyle = '#f0f0f0';
-          ctx.fillRect(0, 0, 400, 300);
-          ctx.strokeStyle = '#333';
-          ctx.lineWidth = 2;
-          ctx.strokeRect(50, 50, 300, 200);
-          ctx.font = '16px Arial';
-          ctx.fillStyle = '#333';
-          ctx.textAlign = 'center';
-          ctx.fillText(`${category.toUpperCase()} Level ${levelNumber}`, 200, 150);
-          ctx.fillText(`Page ${i} from PDF`, 200, 180);
-        }
-        const outlineUrl = canvas.toDataURL();
-
-        newLevels.push({
-          levelNumber,
-          pageNumber: i,
-          category,
-          outlineUrl,
-          unlockDate,
-          lockDate,
-          uploadDate,
-          hasBeenPlayed: false
-        });
+        setProcessedLevels(newLevels);
+        setExistingLevels([...existingLevels, ...newLevels]);
+        setSuccess(response.message);
+        onLevelsCreated?.(newLevels);
+      } else {
+        setError('Failed to process PDF');
       }
 
-      setProcessedLevels(newLevels);
-      
-      // Save to localStorage (simulating database)
-      const allLevels = [...existingLevels, ...newLevels];
-      localStorage.setItem(`${category}-levels`, JSON.stringify(allLevels));
-      setExistingLevels(allLevels);
-
-      // Update file naming in storage path simulation
-      const storagePath = `D:/PuzzleGame/outlines/${category}/`;
-      newLevels.forEach(level => {
-        console.log(`Saved: ${storagePath}level_${level.levelNumber}.svg`);
-      });
-
-      setSuccess(`Successfully processed ${pageCount} pages and created levels ${existingCount + 1} to ${existingCount + pageCount}!`);
-      onLevelsCreated?.(newLevels);
-
     } catch (err) {
-      setError('Failed to process PDF. Please try again.');
-      console.error('PDF processing error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to process PDF. Please try again.');
+      console.error('PDF upload error:', err);
     } finally {
       setIsProcessing(false);
     }
@@ -174,12 +130,20 @@ const AdminPDFUploader: React.FC<AdminPDFUploaderProps> = ({ category, onLevelsC
   };
 
   const deleteLevel = (levelNumber: number) => {
-    const updatedLevels = existingLevels.filter(level => level.levelNumber !== levelNumber);
-    localStorage.setItem(`${category}-levels`, JSON.stringify(updatedLevels));
-    setExistingLevels(updatedLevels);
+    const levelId = `${category.toUpperCase()}#L${levelNumber}`;
     
-    // Also remove from processed levels if it's there
-    setProcessedLevels(prev => prev.filter(level => level.levelNumber !== levelNumber));
+    apiService.deleteLevel(levelId)
+      .then(response => {
+        if (response.success) {
+          const updatedLevels = existingLevels.filter(level => level.levelNumber !== levelNumber);
+          setExistingLevels(updatedLevels);
+          setProcessedLevels(prev => prev.filter(level => level.levelNumber !== levelNumber));
+        }
+      })
+      .catch(error => {
+        console.error('Error deleting level:', error);
+        setError('Failed to delete level');
+      });
   };
 
   const getCategoryDisplayName = () => {

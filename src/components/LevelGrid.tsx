@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useGame } from '../contexts/GameContext';
+import { apiService } from '../services/api';
 import { Star, Lock, Play, Clock, Calendar } from 'lucide-react';
 
 interface LevelGridProps {
@@ -31,17 +32,34 @@ const LevelGrid: React.FC<LevelGridProps> = ({ category, totalLevels, onLevelCli
   const loadAvailableLevels = () => {
     setLoading(true);
     try {
-      const stored = localStorage.getItem(`${category}-levels`);
-      if (stored) {
-        const levels: StoredLevel[] = JSON.parse(stored);
-        setAvailableLevels(levels.sort((a, b) => a.levelNumber - b.levelNumber));
-      } else {
-        setAvailableLevels([]);
-      }
+      apiService.getLevelsByCategory(category)
+        .then(response => {
+          if (response.success) {
+            const levels = response.levels.map((level: any) => ({
+              levelNumber: level.levelNumber,
+              pageNumber: level.pageNumber,
+              category: level.category,
+              outlineUrl: level.outlineUrl,
+              unlockDate: level.unlockDate,
+              lockDate: level.lockDate,
+              uploadDate: level.uploadDate,
+              hasBeenPlayed: level.hasBeenPlayed
+            }));
+            setAvailableLevels(levels.sort((a, b) => a.levelNumber - b.levelNumber));
+          } else {
+            setAvailableLevels([]);
+          }
+        })
+        .catch(error => {
+          console.error('Error loading levels:', error);
+          setAvailableLevels([]);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
     } catch (error) {
       console.error('Error loading levels:', error);
       setAvailableLevels([]);
-    } finally {
       setLoading(false);
     }
   };
