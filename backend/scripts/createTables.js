@@ -2,6 +2,8 @@ const { dynamodb, TABLES } = require('../config/dynamodb');
 
 const createTables = async () => {
   try {
+    console.log('Creating DynamoDB tables...');
+    
     // 1. Users Table
     await createUsersTable();
     
@@ -13,9 +15,6 @@ const createTables = async () => {
     
     // 4. Levels Table
     await createLevelsTable();
-    
-    // 5. Content Table
-    await createContentTable();
     
     console.log('All tables created successfully!');
   } catch (error) {
@@ -36,42 +35,6 @@ const createUsersTable = async () => {
       {
         AttributeName: 'userId',
         AttributeType: 'S'
-      },
-      {
-        AttributeName: 'email',
-        AttributeType: 'S'
-      },
-      {
-        AttributeName: 'username',
-        AttributeType: 'S'
-      }
-    ],
-    GlobalSecondaryIndexes: [
-      {
-        IndexName: 'EmailIndex',
-        KeySchema: [
-          {
-            AttributeName: 'email',
-            KeyType: 'HASH'
-          }
-        ],
-        Projection: {
-          ProjectionType: 'ALL'
-        },
-        BillingMode: 'PAY_PER_REQUEST'
-      },
-      {
-        IndexName: 'UsernameIndex',
-        KeySchema: [
-          {
-            AttributeName: 'username',
-            KeyType: 'HASH'
-          }
-        ],
-        Projection: {
-          ProjectionType: 'ALL'
-        },
-        BillingMode: 'PAY_PER_REQUEST'
       }
     ],
     BillingMode: 'PAY_PER_REQUEST'
@@ -79,10 +42,10 @@ const createUsersTable = async () => {
 
   try {
     await dynamodb.createTable(params).promise();
-    console.log('Users table created successfully');
+    console.log('✓ Users table created successfully');
   } catch (error) {
     if (error.code === 'ResourceInUseException') {
-      console.log('Users table already exists');
+      console.log('✓ Users table already exists');
     } else {
       throw error;
     }
@@ -117,10 +80,10 @@ const createUserProgressTable = async () => {
 
   try {
     await dynamodb.createTable(params).promise();
-    console.log('UserProgress table created successfully');
+    console.log('✓ UserProgress table created successfully');
   } catch (error) {
     if (error.code === 'ResourceInUseException') {
-      console.log('UserProgress table already exists');
+      console.log('✓ UserProgress table already exists');
     } else {
       throw error;
     }
@@ -155,10 +118,10 @@ const createUserSubscriptionsTable = async () => {
 
   try {
     await dynamodb.createTable(params).promise();
-    console.log('UserSubscriptions table created successfully');
+    console.log('✓ UserSubscriptions table created successfully');
   } catch (error) {
     if (error.code === 'ResourceInUseException') {
-      console.log('UserSubscriptions table already exists');
+      console.log('✓ UserSubscriptions table already exists');
     } else {
       throw error;
     }
@@ -178,33 +141,6 @@ const createLevelsTable = async () => {
       {
         AttributeName: 'levelId',
         AttributeType: 'S'
-      },
-      {
-        AttributeName: 'category',
-        AttributeType: 'S'
-      },
-      {
-        AttributeName: 'levelNumber',
-        AttributeType: 'N'
-      }
-    ],
-    GlobalSecondaryIndexes: [
-      {
-        IndexName: 'CategoryIndex',
-        KeySchema: [
-          {
-            AttributeName: 'category',
-            KeyType: 'HASH'
-          },
-          {
-            AttributeName: 'levelNumber',
-            KeyType: 'RANGE'
-          }
-        ],
-        Projection: {
-          ProjectionType: 'ALL'
-        },
-        BillingMode: 'PAY_PER_REQUEST'
       }
     ],
     BillingMode: 'PAY_PER_REQUEST'
@@ -212,59 +148,10 @@ const createLevelsTable = async () => {
 
   try {
     await dynamodb.createTable(params).promise();
-    console.log('Levels table created successfully');
+    console.log('✓ Levels table created successfully');
   } catch (error) {
     if (error.code === 'ResourceInUseException') {
-      console.log('Levels table already exists');
-    } else {
-      throw error;
-    }
-  }
-};
-
-const createContentTable = async () => {
-  const params = {
-    TableName: TABLES.CONTENT,
-    KeySchema: [
-      {
-        AttributeName: 'contentId',
-        KeyType: 'HASH' // Partition key
-      }
-    ],
-    AttributeDefinitions: [
-      {
-        AttributeName: 'contentId',
-        AttributeType: 'S'
-      },
-      {
-        AttributeName: 'category',
-        AttributeType: 'S'
-      }
-    ],
-    GlobalSecondaryIndexes: [
-      {
-        IndexName: 'CategoryIndex',
-        KeySchema: [
-          {
-            AttributeName: 'category',
-            KeyType: 'HASH'
-          }
-        ],
-        Projection: {
-          ProjectionType: 'ALL'
-        },
-        BillingMode: 'PAY_PER_REQUEST'
-      }
-    ],
-    BillingMode: 'PAY_PER_REQUEST'
-  };
-
-  try {
-    await dynamodb.createTable(params).promise();
-    console.log('Content table created successfully');
-  } catch (error) {
-    if (error.code === 'ResourceInUseException') {
-      console.log('Content table already exists');
+      console.log('✓ Levels table already exists');
     } else {
       throw error;
     }

@@ -3,8 +3,8 @@ const { docClient, TABLES } = require('../config/dynamodb');
 class UserProgress {
   static async create(progressData) {
     const progress = {
-      userId: progressData.userId,
-      progressKey: progressData.progressKey, // e.g., "TANGLE#L1" or "FUNTHINKER#BASIC#L1"
+      userId: progressData.userId, // Partition key
+      progressKey: progressData.progressKey, // Sort key - e.g., "TANGLE_L1" or "FUNTHINKER_BASIC_L1"
       levelId: progressData.levelId,
       category: progressData.category,
       subpart: progressData.subpart || 'none',
@@ -89,6 +89,19 @@ class UserProgress {
 
     try {
       await docClient.update(params).promise();
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async deleteProgress(userId, progressKey) {
+    const params = {
+      TableName: TABLES.USER_PROGRESS,
+      Key: { userId, progressKey }
+    };
+
+    try {
+      await docClient.delete(params).promise();
     } catch (error) {
       throw error;
     }

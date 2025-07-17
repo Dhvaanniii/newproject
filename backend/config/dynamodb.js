@@ -11,13 +11,12 @@ AWS.config.update({
 const dynamodb = new AWS.DynamoDB();
 const docClient = new AWS.DynamoDB.DocumentClient();
 
-// Table names
+// Table names - matching your existing tables
 const TABLES = {
   USERS: 'Users',
   USER_PROGRESS: 'UserProgress', 
   USER_SUBSCRIPTIONS: 'UserSubscriptions',
-  LEVELS: 'Levels',
-  CONTENT: 'Content'
+  LEVELS: 'Levels'
 };
 
 module.exports = {

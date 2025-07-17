@@ -3,10 +3,10 @@ const { v4: uuidv4 } = require('uuid');
 
 class Level {
   static async create(levelData) {
-    const levelId = `${levelData.category.toUpperCase()}#L${levelData.levelNumber}`;
+    const levelId = `${levelData.category.toUpperCase()}_L${levelData.levelNumber}`;
     
     const level = {
-      levelId,
+      levelId, // Partition key
       category: levelData.category,
       subpart: levelData.subpart || 'none',
       levelNumber: levelData.levelNumber,
@@ -40,17 +40,15 @@ class Level {
   static async findByCategory(category) {
     const params = {
       TableName: TABLES.LEVELS,
-      IndexName: 'CategoryIndex',
-      KeyConditionExpression: 'category = :category',
+      FilterExpression: 'category = :category',
       ExpressionAttributeValues: {
         ':category': category
-      },
-      ScanIndexForward: true // Sort by levelNumber ascending
+      }
     };
 
     try {
-      const result = await docClient.query(params).promise();
-      return result.Items;
+      const result = await docClient.scan(params).promise();
+      return result.Items.sort((a, b) => a.levelNumber - b.levelNumber);
     } catch (error) {
       throw error;
     }

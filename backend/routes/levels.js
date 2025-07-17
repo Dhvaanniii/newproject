@@ -34,7 +34,7 @@ router.get('/:category', async (req, res) => {
 router.get('/:category/:levelNumber', async (req, res) => {
   try {
     const { category, levelNumber } = req.params;
-    const levelId = `${category.toUpperCase()}#L${levelNumber}`;
+    const levelId = `${category.toUpperCase()}_L${levelNumber}`;
     const level = await Level.findById(levelId);
     
     if (!level) {
@@ -151,7 +151,7 @@ router.post('/:levelId/complete', async (req, res) => {
     }
 
     // Create progress key
-    const progressKey = `${level.category.toUpperCase()}#L${level.levelNumber}`;
+    const progressKey = `${level.category.toUpperCase()}_L${level.levelNumber}`;
 
     // Save user progress
     const progressData = {

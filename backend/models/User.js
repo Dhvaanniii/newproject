@@ -4,11 +4,11 @@ const bcrypt = require('bcryptjs');
 
 class User {
   static async create(userData) {
-    const userId = `USER#${uuidv4()}`;
+    const userId = `USER_${uuidv4()}`;
     const hashedPassword = await bcrypt.hash(userData.password, 10);
     
     const user = {
-      userId,
+      userId, // Partition key
       username: userData.username,
       email: userData.email,
       password: hashedPassword,
@@ -45,15 +45,14 @@ class User {
   static async findByEmail(email) {
     const params = {
       TableName: TABLES.USERS,
-      IndexName: 'EmailIndex',
-      KeyConditionExpression: 'email = :email',
+      FilterExpression: 'email = :email',
       ExpressionAttributeValues: {
         ':email': email
       }
     };
 
     try {
-      const result = await docClient.query(params).promise();
+      const result = await docClient.scan(params).promise();
       return result.Items[0] || null;
     } catch (error) {
       throw error;
@@ -63,15 +62,14 @@ class User {
   static async findByUsername(username) {
     const params = {
       TableName: TABLES.USERS,
-      IndexName: 'UsernameIndex',
-      KeyConditionExpression: 'username = :username',
+      FilterExpression: 'username = :username',
       ExpressionAttributeValues: {
         ':username': username
       }
     };
 
     try {
-      const result = await docClient.query(params).promise();
+      const result = await docClient.scan(params).promise();
       return result.Items[0] || null;
     } catch (error) {
       throw error;
@@ -162,6 +160,19 @@ class User {
         const { password, ...userWithoutPassword } = user;
         return userWithoutPassword;
       });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async deleteUser(userId) {
+    const params = {
+      TableName: TABLES.USERS,
+      Key: { userId }
+    };
+
+    try {
+      await docClient.delete(params).promise();
     } catch (error) {
       throw error;
     }
