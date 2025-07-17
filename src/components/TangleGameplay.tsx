@@ -233,10 +233,21 @@ const TangleGameplay: React.FC<TangleGameplayProps> = ({
   };
 
   const getTargetImageUrl = () => {
-    // Load from uploaded PDF outlines
-    const levels = JSON.parse(localStorage.getItem(`${category}-levels`) || '[]');
-    const currentLevel = levels.find((l: any) => l.levelNumber === level);
-    return currentLevel?.outlineUrl || `https://via.placeholder.com/600x400/e5e7eb/6b7280?text=${category.toUpperCase()}+Level+${level}`;
+    try {
+      // Load from uploaded PDF outlines
+      const levels = JSON.parse(localStorage.getItem(`${category}-levels`) || '[]');
+      const currentLevel = levels.find((l: any) => l.levelNumber === level);
+      
+      if (currentLevel && currentLevel.outlineUrl) {
+        return currentLevel.outlineUrl;
+      }
+      
+      // Fallback to placeholder
+      return `https://via.placeholder.com/600x400/e5e7eb/6b7280?text=${category.toUpperCase()}+Level+${level}`;
+    } catch (error) {
+      console.error('Error loading level image:', error);
+      return `https://via.placeholder.com/600x400/e5e7eb/6b7280?text=${category.toUpperCase()}+Level+${level}`;
+    }
   };
 
   const getPointsForAttempt = (attempt: number) => {
